@@ -7,15 +7,6 @@
 
 extern TIM_HandleTypeDef htim3;
 
-static uint8_t s_x_pwm_started = 0U;
-
-static void MotorX_EnsurePwmStarted(void) {
-  if (s_x_pwm_started == 0U) {
-    (void)HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-    s_x_pwm_started = 1U;
-  }
-}
-
 volatile int32_t current_x = 0;
 volatile int32_t current_y = 0;
 volatile int32_t step_limit = 5;
@@ -107,7 +98,9 @@ __weak void BSP_MotorX_Pulse(uint16_t steps) {
   }
 
   HAL_GPIO_WritePin(MOTOR_EN1_GPIO_Port, MOTOR_EN1_Pin, GPIO_PIN_RESET);
-  MotorX_EnsurePwmStarted();
+  if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1) != HAL_OK) {
+    return;
+  }
 
   for (i = 0U; i < steps; i++) {
     uint32_t t0;
@@ -120,6 +113,8 @@ __weak void BSP_MotorX_Pulse(uint16_t steps) {
       }
     }
   }
+
+  (void)HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 }
 
 __weak void BSP_MotorY_Pulse(uint16_t steps) { (void)steps; }

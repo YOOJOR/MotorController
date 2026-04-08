@@ -1,0 +1,51 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "CMake: Configure (Debug)",
+            "command": "cmake",
+            "args": [
+                "-S",
+                "${workspaceFolder}",
+                "-B",
+                "${workspaceFolder}/build/Debug",
+                "-G",
+                "Ninja",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/cmake/gcc-arm-none-eabi.cmake"
+            ],
+            "problemMatcher": [ ]
+        },
+        {
+            "type": "shell",
+            "label": "CMake: Build (Debug)",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/build/Debug",
+                "--parallel"
+            ],
+            "dependsOn": "CMake: Configure (Debug)",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "shell",
+            "label": "CMake: Clean (Debug)",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "${workspaceFolder}/build/Debug",
+                "--target",
+                "clean"
+            ],
+            "problemMatcher": [ ]
+        }
+    ],
+    "version": "2.0.0"
+}

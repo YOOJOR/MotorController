@@ -63,6 +63,8 @@ void Error_Handler(void);
 #define MOTOR_EN1_GPIO_Port GPIOA
 #define MOTOR_DIR1_Pin GPIO_PIN_3
 #define MOTOR_DIR1_GPIO_Port GPIOA
+#define LASER_Pin GPIO_PIN_5
+#define LASER_GPIO_Port GPIOA
 #define D3LED_Pin GPIO_PIN_7
 #define D3LED_GPIO_Port GPIOA
 
