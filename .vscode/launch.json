@@ -1,6 +1,21 @@
 {
     "configurations": [
         {
+            "cwd": "${workspaceRoot}",
+            "executable": "build/Debug/MotorController.elf",
+            "name": "Debug with OpenOCD",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [ "openocd.cfg" ],
+            "searchDir": [ "${workspaceFolder}/STM32F407.svd" ],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none"
+        },
+
+
+
+        {
             "name": "STM32F407 Debug (OpenOCD)",
             "type": "cortex-debug",
             "request": "launch",
