@@ -85,7 +85,7 @@ void MotionCtrl_1msTask(void) {
 
 __weak void BSP_MotorX_SetDir(uint8_t dir_positive) {
   HAL_GPIO_WritePin(MOTOR_DIR1_GPIO_Port, MOTOR_DIR1_Pin,
-                    (dir_positive != 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+                    (dir_positive != 0U) ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
 __weak void BSP_MotorY_SetDir(uint8_t dir_positive) { (void)dir_positive; }

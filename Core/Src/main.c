@@ -48,8 +48,9 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 static uint32_t s_last_ctrl_tick = 0U;
-static uint32_t s_last_laser_tick = 0U;
-static const uint32_t s_laser_blink_period_ms = 50U;
+static uint32_t s_last_laser_cycle = 0U;
+static uint32_t s_laser_toggle_interval_cycles = 0U;
+static const uint32_t s_laser_frequency_hz = 50U;
 static const UartParserMode_t s_uart_mode = UART_PARSER_MODE_IT;
 
 /* USER CODE END PV */
@@ -65,6 +66,17 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void LaserTiming_Init(void) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0U;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+    s_laser_toggle_interval_cycles = HAL_RCC_GetHCLKFreq() / (2U * s_laser_frequency_hz);
+    if (s_laser_toggle_interval_cycles == 0U) {
+        s_laser_toggle_interval_cycles = 1U;
+    }
+    s_last_laser_cycle = DWT->CYCCNT;
+}
 
 /* USER CODE END 0 */
 
@@ -98,6 +110,7 @@ int main(void) {
     MX_TIM3_Init();
     MX_USART1_UART_Init();
     /* USER CODE BEGIN 2 */
+    LaserTiming_Init();
     MotionCtrl_Init();
     MotionCtrl_SetStepLimit(5);
     if (UartParser_Init(&huart1, s_uart_mode) != HAL_OK) {
@@ -112,8 +125,9 @@ int main(void) {
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        if ((HAL_GetTick() - s_last_laser_tick) >= s_laser_blink_period_ms) {
-            s_last_laser_tick = HAL_GetTick();
+        uint32_t now_cycle = DWT->CYCCNT;
+        if ((now_cycle - s_last_laser_cycle) >= s_laser_toggle_interval_cycles) {
+            s_last_laser_cycle = now_cycle;
             HAL_GPIO_TogglePin(LASER_GPIO_Port, LASER_Pin);
         }
 
