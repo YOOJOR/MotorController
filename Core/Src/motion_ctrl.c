@@ -5,6 +5,7 @@
 #include "main.h"
 #include "uart_parser.h"
 
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 
 volatile int32_t current_x = 0;
@@ -88,33 +89,46 @@ __weak void BSP_MotorX_SetDir(uint8_t dir_positive) {
                     (dir_positive != 0U) ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
-__weak void BSP_MotorY_SetDir(uint8_t dir_positive) { (void)dir_positive; }
-
-__weak void BSP_MotorX_Pulse(uint16_t steps) {
+static void MotionCtrl_PulseByTimer(TIM_HandleTypeDef* htim, uint32_t channel,
+                                    GPIO_TypeDef* en_port, uint16_t en_pin,
+                                    uint16_t steps) {
   uint16_t i;
 
-  if (steps == 0U) {
+  if ((htim == NULL) || (steps == 0U)) {
     return;
   }
 
-  HAL_GPIO_WritePin(MOTOR_EN1_GPIO_Port, MOTOR_EN1_Pin, GPIO_PIN_RESET);
-  if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1) != HAL_OK) {
+  HAL_GPIO_WritePin(en_port, en_pin, GPIO_PIN_RESET);
+  if (HAL_TIM_PWM_Start(htim, channel) != HAL_OK) {
     return;
   }
 
   for (i = 0U; i < steps; i++) {
     uint32_t t0;
 
-    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);
+    __HAL_TIM_CLEAR_FLAG(htim, TIM_FLAG_UPDATE);
     t0 = HAL_GetTick();
-    while (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) == RESET) {
+    while (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_UPDATE) == RESET) {
       if ((HAL_GetTick() - t0) > 20U) {
         break;
       }
     }
   }
 
-  (void)HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+  (void)HAL_TIM_PWM_Stop(htim, channel);
 }
 
-__weak void BSP_MotorY_Pulse(uint16_t steps) { (void)steps; }
+__weak void BSP_MotorX_Pulse(uint16_t steps) {
+  MotionCtrl_PulseByTimer(&htim3, TIM_CHANNEL_1, MOTOR_EN1_GPIO_Port,
+                          MOTOR_EN1_Pin, steps);
+}
+
+__weak void BSP_MotorY_SetDir(uint8_t dir_positive) {
+  HAL_GPIO_WritePin(MOTOR_DIR2_GPIO_Port, MOTOR_DIR2_Pin,
+                    (dir_positive != 0U) ? GPIO_PIN_RESET : GPIO_PIN_SET);
+}
+
+__weak void BSP_MotorY_Pulse(uint16_t steps) {
+  MotionCtrl_PulseByTimer(&htim1, TIM_CHANNEL_3, MOTOR_EN2_GPIO_Port,
+                          MOTOR_EN2_Pin, steps);
+}

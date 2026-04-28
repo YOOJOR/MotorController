@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex-Debug: Flash via OpenOCD",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/MotorController.elf",
+            "configFiles": [
+                "openocd.cfg"
+            ],
+            "preLaunchTask": "Flash ELF (OpenOCD)",
+            "runToEntryPoint": "main"
+        }
+    ]
+}
