@@ -50,10 +50,21 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 static uint32_t s_last_ctrl_tick = 0U;
 static uint32_t s_last_laser_cycle = 0U;
-static uint32_t s_laser_toggle_interval_cycles = 0U;
-static const uint32_t s_laser_frequency_hz = 50U;
+static uint32_t s_laser_pwm_toggle_cycles = 0U;
+static uint32_t s_laser_idle_toggle_cycles = 0U;
+static const uint32_t s_laser_frequency_hz = 38000U; // 38kHz required by doc.md
+static const uint32_t s_laser_idle_hz = 50U;         // 50Hz idle aiming
 static const UartParserMode_t s_uart_mode = UART_PARSER_MODE_IT;
 
+// State machine variables for laser commands
+static uint8_t s_laser_cmd_type = 0;
+static uint8_t s_laser_pulse_count = 0;
+static uint32_t s_laser_state_tick = 0U;
+static enum {
+    LASER_IDLE,
+    LASER_PULSE_ON,
+    LASER_PULSE_OFF
+} s_laser_state = LASER_IDLE;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,15 +79,25 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void App_StartLaserCmd(uint8_t cmd) {
+    if (cmd == 1 || cmd == 2 || cmd == 3) {
+        s_laser_cmd_type = cmd;
+        s_laser_pulse_count = 0;
+        s_laser_state = LASER_PULSE_ON;
+        s_laser_state_tick = HAL_GetTick();
+    }
+}
+
 static void LaserTiming_Init(void) {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0U;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
-    s_laser_toggle_interval_cycles = HAL_RCC_GetHCLKFreq() / (2U * s_laser_frequency_hz);
-    if (s_laser_toggle_interval_cycles == 0U) {
-        s_laser_toggle_interval_cycles = 1U;
+    s_laser_pwm_toggle_cycles = HAL_RCC_GetHCLKFreq() / (2U * s_laser_frequency_hz);
+    if (s_laser_pwm_toggle_cycles == 0U) {
+        s_laser_pwm_toggle_cycles = 1U;
     }
+    s_laser_idle_toggle_cycles = HAL_RCC_GetHCLKFreq() / (2U * s_laser_idle_hz);
     s_last_laser_cycle = DWT->CYCCNT;
 }
 
@@ -131,9 +152,38 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
         uint32_t now_cycle = DWT->CYCCNT;
-        if ((now_cycle - s_last_laser_cycle) >= s_laser_toggle_interval_cycles) {
-            s_last_laser_cycle = now_cycle;
-            HAL_GPIO_TogglePin(LASER_GPIO_Port, LASER_Pin);
+        
+        if (s_laser_state == LASER_IDLE) {
+            // Restore 50Hz idle pulsing so the laser is visible for aiming
+            if ((now_cycle - s_last_laser_cycle) >= s_laser_idle_toggle_cycles) {
+                s_last_laser_cycle = now_cycle;
+                HAL_GPIO_TogglePin(LASER_GPIO_Port, LASER_Pin);
+            }
+        }
+        else if (s_laser_state == LASER_PULSE_ON) {
+            // Software 38kHz PWM
+            if ((now_cycle - s_last_laser_cycle) >= s_laser_pwm_toggle_cycles) {
+                s_last_laser_cycle = now_cycle;
+                HAL_GPIO_TogglePin(LASER_GPIO_Port, LASER_Pin);
+            }
+            
+            uint16_t duration = (s_laser_cmd_type == 1) ? 2 : ((s_laser_cmd_type == 2) ? 4 : 6);
+            if ((HAL_GetTick() - s_laser_state_tick) >= duration) {
+                s_laser_state = LASER_PULSE_OFF;
+                s_laser_state_tick = HAL_GetTick();
+                HAL_GPIO_WritePin(LASER_GPIO_Port, LASER_Pin, GPIO_PIN_RESET);
+            }
+        } else if (s_laser_state == LASER_PULSE_OFF) {
+            if ((HAL_GetTick() - s_laser_state_tick) >= 10) {
+                s_laser_pulse_count++;
+                if (s_laser_pulse_count >= 3) {
+                    s_laser_state = LASER_IDLE;
+                    s_laser_cmd_type = 0;
+                } else {
+                    s_laser_state = LASER_PULSE_ON;
+                    s_laser_state_tick = HAL_GetTick();
+                }
+            }
         }
 
         if ((HAL_GetTick() - s_last_ctrl_tick) >= 1U) {
@@ -237,8 +287,8 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_ENABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime = 0;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;

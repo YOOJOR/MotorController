@@ -98,6 +98,27 @@ def send_target_steps(step_x: int, step_y: int) -> None:
     print(payload.strip())
 
 
+def send_laser_cmd(cmd: int) -> None:
+    global serial_available, serial_conn
+    payload = f"<L,{cmd}>\n"
+
+    if serial_available and serial_conn is not None:
+        try:
+            serial_conn.write(payload.encode("ascii"))
+            print(f"[Serial] Laser Trigger Cmd: {cmd} sent.")
+            return
+        except Exception as exc:
+            print(f"[Serial] Write failed ({exc}), switching to print-only mode.")
+            serial_available = False
+            try:
+                serial_conn.close()
+            except Exception:
+                pass
+            serial_conn = None
+
+    print(payload.strip())
+
+
 def update_target_from_steps(step_x: int, step_y: int) -> None:
     global target_step_x, target_step_y
     target_step_x = step_x
@@ -162,16 +183,26 @@ def handle_key(key_code: int) -> bool:
         update_target_from_steps(target_step_x + KEY_STEP_INCREMENT, target_step_y)
         return True
 
-    if char_code in (ord("q"), ord("Q")):
+    if char_code == 27: # Esc
         return False
+
+    if char_code in (ord("q"), ord("Q")):
+        send_laser_cmd(1)
+        return True
+    if char_code in (ord("w"), ord("W")):
+        send_laser_cmd(2)
+        return True
+    if char_code in (ord("e"), ord("E")):
+        send_laser_cmd(3)
+        return True
 
     dx = 0
     dy = 0
 
-    up_keys_low8 = {ord("w"), ord("W"), ord("8")}
-    down_keys_low8 = {ord("s"), ord("S"), ord("2")}
-    left_keys_low8 = {ord("a"), ord("A"), ord("4")}
-    right_keys_low8 = {ord("d"), ord("D"), ord("6")}
+    up_keys_low8 = {ord("i"), ord("I"), ord("8")}
+    down_keys_low8 = {ord("k"), ord("K"), ord("2")}
+    left_keys_low8 = {ord("j"), ord("J"), ord("4")}
+    right_keys_low8 = {ord("l"), ord("L"), ord("6")}
 
     if char_code in up_keys_low8:
         dy = KEY_STEP_INCREMENT

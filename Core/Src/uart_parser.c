@@ -56,6 +56,16 @@ static bool Parser_ParseFrame(const char* frame, int32_t* out_x,
   }
 
   *comma = '\0';
+
+  if (temp[0] == 'L') {
+    long cmd = strtol(comma + 1, &end_y, 10);
+    if (*end_y == '\0') {
+      extern void App_StartLaserCmd(uint8_t cmd);
+      App_StartLaserCmd((uint8_t)cmd);
+      return false; // MUST return false so it doesn't zero out target_x and target_y!
+    }
+  }
+
   x = strtol(temp, &end_x, 10);
   y = strtol(comma + 1, &end_y, 10);
 

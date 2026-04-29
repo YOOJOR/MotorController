@@ -84,7 +84,7 @@ void MotionCtrl_1msTask(void) {
   current_y = next_y;
 }
 
-__weak void BSP_MotorX_SetDir(uint8_t dir_positive) {
+void BSP_MotorX_SetDir(uint8_t dir_positive) {
   HAL_GPIO_WritePin(MOTOR_DIR1_GPIO_Port, MOTOR_DIR1_Pin,
                     (dir_positive != 0U) ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
@@ -118,17 +118,17 @@ static void MotionCtrl_PulseByTimer(TIM_HandleTypeDef* htim, uint32_t channel,
   (void)HAL_TIM_PWM_Stop(htim, channel);
 }
 
-__weak void BSP_MotorX_Pulse(uint16_t steps) {
+void BSP_MotorX_Pulse(uint16_t steps) {
   MotionCtrl_PulseByTimer(&htim3, TIM_CHANNEL_1, MOTOR_EN1_GPIO_Port,
                           MOTOR_EN1_Pin, steps);
 }
 
-__weak void BSP_MotorY_SetDir(uint8_t dir_positive) {
+void BSP_MotorY_SetDir(uint8_t dir_positive) {
   HAL_GPIO_WritePin(MOTOR_DIR2_GPIO_Port, MOTOR_DIR2_Pin,
                     (dir_positive != 0U) ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
-__weak void BSP_MotorY_Pulse(uint16_t steps) {
+void BSP_MotorY_Pulse(uint16_t steps) {
   MotionCtrl_PulseByTimer(&htim1, TIM_CHANNEL_3, MOTOR_EN2_GPIO_Port,
                           MOTOR_EN2_Pin, steps);
 }
