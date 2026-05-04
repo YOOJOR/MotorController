@@ -17,9 +17,6 @@ typedef enum {
   UART_PARSER_MODE_DMA_IDLE = 1
 } UartParserMode_t;
 
-extern volatile int32_t target_x;
-extern volatile int32_t target_y;
-
 HAL_StatusTypeDef UartParser_Init(UART_HandleTypeDef* huart,
                                   UartParserMode_t mode);
 void UartParser_Reset(void);

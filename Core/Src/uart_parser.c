@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-volatile int32_t target_x = 0;
-volatile int32_t target_y = 0;
+#include "motion_ctrl.h"
 
 static UART_HandleTypeDef* s_huart = NULL;
 static UartParserMode_t s_mode = UART_PARSER_MODE_IT;
@@ -23,6 +22,14 @@ static uint16_t s_dma_last_pos = 0;
 static void Parser_ResetFrame(void) {
   s_frame_len = 0;
   s_frame_overflow = false;
+}
+
+static bool Parser_IsAxisCommand(int32_t x, int32_t y) {
+  if ((x < -1) || (x > 1) || (y < -1) || (y > 1)) {
+    return false;
+  }
+
+  return !((x != 0) && (y != 0));
 }
 
 static bool Parser_ParseFrame(const char* frame, int32_t* out_x,
@@ -62,7 +69,7 @@ static bool Parser_ParseFrame(const char* frame, int32_t* out_x,
     if (*end_y == '\0') {
       extern void App_StartLaserCmd(uint8_t cmd);
       App_StartLaserCmd((uint8_t)cmd);
-      return false; // MUST return false so it doesn't zero out target_x and target_y!
+      return false; // Keep laser frames from falling through to motion parsing.
     }
   }
 
@@ -73,8 +80,29 @@ static bool Parser_ParseFrame(const char* frame, int32_t* out_x,
     return false;
   }
 
+  if (!Parser_IsAxisCommand((int32_t)x, (int32_t)y)) {
+    return false;
+  }
+
   *out_x = (int32_t)x;
   *out_y = (int32_t)y;
+
+  if (*out_x > 0) {
+    MotionCtrl_SetState_X(MOTOR_RUN_POS);
+  } else if (*out_x < 0) {
+    MotionCtrl_SetState_X(MOTOR_RUN_NEG);
+  } else {
+    MotionCtrl_SetState_X(MOTOR_STOP);
+  }
+
+  if (*out_y > 0) {
+    MotionCtrl_SetState_Y(MOTOR_RUN_POS);
+  } else if (*out_y < 0) {
+    MotionCtrl_SetState_Y(MOTOR_RUN_NEG);
+  } else {
+    MotionCtrl_SetState_Y(MOTOR_STOP);
+  }
+
   return true;
 }
 
@@ -92,10 +120,7 @@ static void Parser_TryCommitFrame(void) {
   }
 
   s_frame_buf[s_frame_len] = '\0';
-  if (Parser_ParseFrame(s_frame_buf, &x, &y)) {
-    target_x = x;
-    target_y = y;
-  } else {
+  if (!Parser_ParseFrame(s_frame_buf, &x, &y)) {
     s_drop_count++;
   }
 
@@ -189,8 +214,6 @@ void UartParser_Reset(void) {
   __disable_irq();
   Parser_ResetFrame();
   s_drop_count = 0;
-  target_x = 0;
-  target_y = 0;
   __enable_irq();
 }
 

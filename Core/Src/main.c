@@ -138,7 +138,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
     LaserTiming_Init();
     MotionCtrl_Init();
-    MotionCtrl_SetStepLimit(5);
     if (UartParser_Init(&huart1, s_uart_mode) != HAL_OK) {
         Error_Handler();
     }
@@ -287,13 +286,13 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_ENABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime = 0;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_ENABLE;
   if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
   {
     Error_Handler();
